@@ -69,7 +69,7 @@ Now we watch calico pods to make sure they go into `RUNNING` first before proced
     
 
 # Now we create a dummy http service to test everything against:
-Make the dummy.yml file which we can kubectl create next
+Make the `dummy.yml` file which we can kubectl create next
 
     apiVersion: v1
     kind: Service
