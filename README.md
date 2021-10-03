@@ -112,16 +112,16 @@ Now save it and exit then:
 ## Now we craete the stub ingress for the echos
 Make a file called `echo_ingress.yml`  make sure to update echo1.example.com with your own local domain that you use in your home network.
 
-        apiVersion: networking.k8s.io/v1beta1
-        kind: Ingress
-        metadata:
-          name: echo-ingress
-        spec:
-          rules:
-          - host: echo1.example.com
-            http:
-              paths:
-              - backend:
-                  serviceName: echo1
-                  servicePort: 80
+    apiVersion: networking.k8s.io/v1beta1
+    kind: Ingress
+    metadata:
+      name: echo-ingress
+    spec:
+      rules:
+      - host: echo1.example.com
+        http:
+          paths:
+          - backend:
+              serviceName: echo1
+              servicePort: 80
 
