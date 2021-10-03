@@ -36,33 +36,41 @@ See here for details: https://docs.docker.com/engine/install/ubuntu/
     
 # Now we install k8s with kubeadm
 Please keep in mind I use 192.168.0.0 here as my home network does not conflict you may decide to use something else here but be sure to update calico also or your CNI of choice
+
     sudo kubeadm init --pod-network-cidr=192.168.0.0/16
 
 ## Now we set up kubectl config files so we can talk to k8s directly
+
     mkdir -p $HOME/.kube
     sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
     sudo chown $(id -u):$(id -g) $HOME/.kube/config
     
 ## I prefer calico as my CNI as thats what I use in prod so install tigera operator
 See howto here: https://docs.projectcalico.org/getting-started/kubernetes/quickstart
+
     kubectl create -f https://docs.projectcalico.org/manifests/tigera-operator.yaml
     kubectl create -f https://docs.projectcalico.org/manifests/custom-resources.yaml
 
 Now we watch calico pods to make sure they go into `RUNNING` first before proceding
+
     watch kubectl get pods -n calico-system
 
 # Now we wait till calico is done then taint the masters so we can run pods on them
+
     kubectl taint nodes --all node-role.kubernetes.io/master-
     
 # Installing NGinx ingress controller as bare metal install:
+
     kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.0.2/deploy/static/provider/baremetal/deploy.yaml
     
 # Install cert manager
+
     kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.5.3/cert-manager.yaml
     
 
 # Now we create a dummy http service to test everything against:
 Make the dummy.yml file which we can kubectl create next
+
     apiVersion: v1
     kind: Service
     metadata:
@@ -96,5 +104,6 @@ Make the dummy.yml file which we can kubectl create next
             ports:
             - containerPort: 5678
             
-Now save it and exit then 
+Now save it and exit then:
+
     kubectl apply -f dummy.yml
