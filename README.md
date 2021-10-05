@@ -59,13 +59,14 @@ Now we watch calico pods to make sure they go into `RUNNING` first before proced
 
     kubectl taint nodes --all node-role.kubernetes.io/master-
     
-# Installing NGinx ingress controller as bare metal install:
 
-    kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.0.2/deploy/static/provider/baremetal/deploy.yaml
-    
-# Install cert manager
+# Install helm to use be able to manage / install standard packages (this is on  your local box not on the k8s host)
 
-    kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.5.3/cert-manager.yaml
+    curl https://baltocdn.com/helm/signing.asc | sudo apt-key add -
+    sudo apt-get install apt-transport-https --yes
+    echo "deb https://baltocdn.com/helm/stable/debian/ all main" | sudo tee /etc/apt/sources.list.d/helm-stable-debian.list
+    sudo apt-get update
+    sudo apt-get install helm
     
 
 # Now we create a dummy http service to test everything against:
@@ -109,26 +110,43 @@ Now save it and exit then:
     kubectl apply -f dummy.yml
     
     
-## Now we craete the stub ingress for the echos
-Make a file called `echo_ingress.yml`  make sure to update echo1.example.com with your own local domain that you use in your home network.
+## Now we install traefik with helm:
 
-    apiVersion: networking.k8s.io/v1
-    kind: Ingress
+
+
+## Update Traefik load balancer to use nodePort:
+First save the following file to `updateLB.yml`
+
+    ---
+    kind: Service
+    apiVersion: v1
     metadata:
-      name: ingress-echo
-      annotations:
-        # use the shared ingress-nginx
-        kubernetes.io/ingress.class: "nginx"
+      labels:
+        app.kubernetes.io/instance: traefik
+        app.kubernetes.io/name: traefik
+      name: traefik
+      namespace: traefik-v2
     spec:
-      rules:
-      - host: echo1.example.com
-        http:
-          paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: echo1
-                port:
-                  number: 80
+      selector:
+        app.kubernetes.io/instance: traefik
+        app.kubernetes.io/name: traefik
+      ports:
+        - name: web
+          nodePort: 32080
+          port: 80
+          protocol: TCP
+          targetPort: web
+        - name: websecure
+          nodePort: 32443
+          port: 443
+          protocol: TCP
+          targetPort: websecure
+      type: NodePort
+
+Now we update the load balancer to nodeport:
+
+    kubectl apply -f updateLB.yml
+    
+# Finally log into the box to set up iptables
+I do this because my internal lab has uninmportant crap and I can just quickly map my web nodeport locations to low ports on linux:
 
