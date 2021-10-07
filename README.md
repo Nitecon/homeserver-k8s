@@ -58,16 +58,7 @@ Now we watch calico pods to make sure they go into `RUNNING` first before proced
 # Now we wait till calico is done then taint the masters so we can run pods on them
 
     kubectl taint nodes --all node-role.kubernetes.io/master-
-    
-
-# Install helm to use be able to manage / install standard packages (this is on  your local box not on the k8s host)
-
-    curl https://baltocdn.com/helm/signing.asc | sudo apt-key add -
-    sudo apt-get install apt-transport-https --yes
-    echo "deb https://baltocdn.com/helm/stable/debian/ all main" | sudo tee /etc/apt/sources.list.d/helm-stable-debian.list
-    sudo apt-get update
-    sudo apt-get install helm
-    
+   
 
 # Now we create a dummy http service to test everything against:
 Make the `dummy.yml` file which we can kubectl create next
@@ -122,8 +113,8 @@ Then we install nginx via helm and set the node ports for the local server:
 
     kubectl wait --for=condition=ready pod --selector=app.kubernetes.io/component=controller --timeout=120s
     
-## Setup the server to listen on port 80 / 443 via socat:
-I actually do something different on my boxes via my own personal proxy but hitting your server via a browser without having to add the port can be accomplished like so:
+## Setup the server to listen on port 80 / 443
+Since NodePort is a high selected port range on the box you still have to listen to it on the local box via another means.  I prefer using nginx for this as I use nginx on the box for other things beyond tcp port 80/443 binding and forwarding to k8s.  You can obviously use something like socat or anything else but please don't try to update the nodeports to low values during k8s install by overriding the standard ports.
 
 We will become root for this as we are adding services to systemd that will be running the redirects for us:
 
