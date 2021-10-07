@@ -110,43 +110,53 @@ Now save it and exit then:
     kubectl apply -f dummy.yml
     
     
-## Now we install traefik with helm:
+## Now we install helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
 
+First be sure to go here: https://helm.sh/docs/intro/install/ (Installing Helm)
 
+Then we install nginx via helm and set the node ports for the local server:
 
-## Update Traefik load balancer to use nodePort:
-First save the following file to `updateLB.yml`
+    helm repo update
 
-    ---
-    kind: Service
-    apiVersion: v1
-    metadata:
-      labels:
-        app.kubernetes.io/instance: traefik
-        app.kubernetes.io/name: traefik
-      name: traefik
-      namespace: traefik-v2
-    spec:
-      selector:
-        app.kubernetes.io/instance: traefik
-        app.kubernetes.io/name: traefik
-      ports:
-        - name: web
-          nodePort: 32080
-          port: 80
-          protocol: TCP
-          targetPort: web
-        - name: websecure
-          nodePort: 32443
-          port: 443
-          protocol: TCP
-          targetPort: websecure
-      type: NodePort
+    helm install ingress-nginx ingress-nginx/ingress-nginx --set controller.service.type=NodePort --set controller.service.httpPort.nodePort=32080 --set controller.service.httpsPort.nodePort=32443
 
-Now we update the load balancer to nodeport:
-
-    kubectl apply -f updateLB.yml
+    kubectl wait --for=condition=ready pod --selector=app.kubernetes.io/component=controller --timeout=120s
     
-# Finally log into the box to set up iptables
-I do this because my internal lab has uninmportant crap and I can just quickly map my web nodeport locations to low ports on linux:
+## Setup the server to listen on port 80 / 443 via socat:
+I actually do something different on my boxes via my own personal proxy but hitting your server via a browser without having to add the port can be accomplished like so:
 
+We will become root for this as we are adding services to systemd that will be running the redirects for us:
+
+    sudo apt install -y nginx
+
+Now that we have a local install of nginx lets update the config file to look like this:
+
+    user www-data;
+    worker_processes auto;
+    pid /run/nginx.pid;
+    include /etc/nginx/modules-enabled/*.conf;
+
+    events {
+            worker_connections 768;
+            # multi_accept on;
+    }
+
+    stream {
+        # ...
+        server {
+            listen     80;
+            proxy_pass 127.0.0.1:32080;
+        }
+        server {
+            listen     443;
+            #TCP traffic will be forwarded to the specified server
+            proxy_pass 127.0.0.1:32443;
+        }
+    }
+    
+    
+Notice that you can update port 32080 to your nodeport that you set during the helm install for http port and also update 32443 for your https port, then simply start and enable nginx with:
+
+    sudo systemctl enable nginx
+    sudo service nginx start
+    
