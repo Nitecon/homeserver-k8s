@@ -44,16 +44,36 @@ Please keep in mind I use 192.168.0.0 here as my home network does not conflict 
     mkdir -p $HOME/.kube
     sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
     sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+## Install cillium (works well with metallb)
+
+    These configurations are both broken and cause my server to stop responding (Inet goes down...)
+    presumably because the pod service is overlapping with my actual network... need to fix this later...
+
     
-## I prefer calico as my CNI as thats what I use in prod so install tigera operator
-See howto here: https://docs.projectcalico.org/getting-started/kubernetes/quickstart
+    helm repo add cilium https://helm.cilium.io/
+    helm repo update
 
-    kubectl create -f https://docs.projectcalico.org/manifests/tigera-operator.yaml
-    kubectl create -f https://docs.projectcalico.org/manifests/custom-resources.yaml
+    helm install cilium cilium/cilium --version 1.10.5 \
+    --namespace kube-system \
+    --set kubeProxyReplacement=strict \
+    --set k8sServiceHost=10.0.0.254 \
+    --set k8sServicePort=6443 \
+    --set hubble.listenAddress=":4244" \
+    --set hubble.relay.enabled=true \
+    --set hubble.ui.enabled=true \
+    --set hubble.metrics.enabled="{dns,drop,tcp,flow,port-distribution,icmp,http}"
 
-Now we watch calico pods to make sure they go into `RUNNING` first before proceding
+helm install cilium cilium/cilium --version 1.10.5 \
+    --namespace kube-system \
+    --set config.ipam=kubernetes \
+    --set native-routing-cidr=10.0.0.0/24 \
+    --set global.ipMasqAgent.enabled=true \
+    --set global.kubeProxyReplacement=strict \
+    --set global.k8sServiceHost=10.0.0.254 \
+    --set global.k8sServicePort=6443
 
-    watch kubectl get pods -n calico-system
+watch kubectl get pods -n kube-system
 
 # Now we wait till calico is done then taint the masters so we can run pods on them
 
